@@ -160,7 +160,6 @@ func (entry *Entry) Fatal(args ...interface{}) {
 	if entry.Logger.Level >= FatalLevel {
 		entry.log(FatalLevel, fmt.Sprint(args...))
 	}
-	os.Exit(1)
 }
 
 func (entry *Entry) Panic(args ...interface{}) {
