@@ -1,13 +1,24 @@
 package logrus
 
-import (
-	"io"
-)
+import "io"
 
 var (
 	// std is the name of the standard logger in stdlib `log`
-	std = New()
+	std              = New()
+	usePackageLogger = false
 )
+
+// Get access to the underlying pacakge level logger
+func GetPackageLogger() *Logger {
+	return std
+}
+
+// SetUsePackageLogger forces all log messages to go
+// through the io.Writer of the specified logger
+// The flag is used in entry.go
+func SetUsePackageLogger(val bool) {
+	usePackageLogger = val
+}
 
 // SetOutput sets the standard logger output.
 func SetOutput(out io.Writer) {
@@ -46,6 +57,11 @@ func WithField(key string, value interface{}) *Entry {
 	return std.WithField(key, value)
 }
 
+// Convienience method to access WithField
+func WF(key string, value interface{}) *Entry {
+	return std.WithField(key, value)
+}
+
 // WithFields creates an entry from the standard logger and adds multiple
 // fields to it. This is simply a helper for `WithField`, invoking it
 // once for each field.
@@ -53,6 +69,11 @@ func WithField(key string, value interface{}) *Entry {
 // Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
 // or Panic on the Entry it returns.
 func WithFields(fields Fields) *Entry {
+	return std.WithFields(fields)
+}
+
+// Convienience method to access WithFields
+func WFs(fields Fields) *Entry {
 	return std.WithFields(fields)
 }
 

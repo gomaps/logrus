@@ -40,7 +40,15 @@ func NewEntry(logger *Logger) *Entry {
 
 // Returns a reader for the entry, which is a proxy to the formatter.
 func (entry *Entry) Reader() (*bytes.Buffer, error) {
-	serialized, err := entry.Logger.Formatter.Format(entry)
+	var serialized []byte
+	var err error
+
+	if usePackageLogger {
+		serialized, err = std.Formatter.Format(entry)
+	} else {
+		serialized, err = entry.Logger.Formatter.Format(entry)
+	}
+
 	return bytes.NewBuffer(serialized), err
 }
 
@@ -60,6 +68,10 @@ func (entry *Entry) WithField(key string, value interface{}) *Entry {
 	return entry.WithFields(Fields{key: value})
 }
 
+func (entry *Entry) WF(key string, value interface{}) *Entry {
+	return entry.WithFields(Fields{key: value})
+}
+
 // Add a map of fields to the Entry.
 func (entry *Entry) WithFields(fields Fields) *Entry {
 	data := Fields{}
@@ -72,10 +84,21 @@ func (entry *Entry) WithFields(fields Fields) *Entry {
 	return &Entry{Logger: entry.Logger, Data: data}
 }
 
+func (entry *Entry) WFs(fields Fields) *Entry {
+	return entry.WithFields(fields)
+}
+
 func (entry *Entry) log(level Level, msg string) string {
 	entry.Time = time.Now()
 	entry.Level = level
 	entry.Message = msg
+
+	// Add our root logger's context fields if any
+	//if entry.Logger.ContextFields != nil {
+	//		for k, v := range *entry.Logger.ContextFields {
+	//entry.Data[k] = v
+	//}
+	//	}
 
 	if err := entry.Logger.Hooks.Fire(level, entry); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to fire hook", err)
@@ -86,10 +109,18 @@ func (entry *Entry) log(level Level, msg string) string {
 		fmt.Fprintf(os.Stderr, "Failed to obtain reader, %v", err)
 	}
 
-	entry.Logger.mu.Lock()
-	defer entry.Logger.mu.Unlock()
+	if usePackageLogger == true {
+		std.mu.Lock()
+		defer std.mu.Unlock()
 
-	_, err = io.Copy(entry.Logger.Out, reader)
+		_, err = io.Copy(std.Out, reader)
+	} else {
+		entry.Logger.mu.Lock()
+		defer entry.Logger.mu.Unlock()
+
+		_, err = io.Copy(entry.Logger.Out, reader)
+	}
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write to log, %v", err)
 	}

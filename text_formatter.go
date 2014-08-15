@@ -55,6 +55,20 @@ func (f *TextFormatter) Format(entry *Entry) ([]byte, error) {
 				keys = append(keys, k)
 			}
 		}
+
+		ctxKeys := make([]string, 0)
+		for k, _ := range *entry.Logger.ContextFields {
+			if k != "level" && k != "time" && k != "msg" {
+				ctxKeys = append(ctxKeys, k)
+			}
+		}
+
+		sort.Strings(ctxKeys)
+		for _, k := range ctxKeys {
+			v := (*entry.Logger.ContextFields)[k]
+			fmt.Fprintf(b, " \x1b[%dm%s\x1b[0m=%v", levelColor, k, v)
+		}
+
 		sort.Strings(keys)
 		for _, k := range keys {
 			v := entry.Data[k]

@@ -28,6 +28,8 @@ type Logger struct {
 	Level Level
 	// Used to sync writing to the log.
 	mu sync.Mutex
+	// Contains fields to be appended to any logs done by this logger.
+	ContextFields *Fields
 }
 
 // Creates a new logger. Configuration should be set by changing `Formatter`,
@@ -44,11 +46,16 @@ type Logger struct {
 // It's recommended to make this a global instance called `log`.
 func New() *Logger {
 	return &Logger{
-		Out:       os.Stdout,
-		Formatter: new(TextFormatter),
-		Hooks:     make(levelHooks),
-		Level:     InfoLevel,
+		Out:           os.Stdout,
+		Formatter:     new(TextFormatter),
+		Hooks:         make(levelHooks),
+		Level:         InfoLevel,
+		ContextFields: &Fields{},
 	}
+}
+
+func (logger *Logger) GetContextFields() *Fields {
+	return logger.ContextFields
 }
 
 // Adds a field to the log entry, note that you it doesn't log until you call
@@ -58,10 +65,22 @@ func (logger *Logger) WithField(key string, value interface{}) *Entry {
 	return NewEntry(logger).WithField(key, value)
 }
 
+func (logger *Logger) WF(key string, value interface{}) *Entry {
+	return NewEntry(logger).WithField(key, value)
+}
+
 // Adds a struct of fields to the log entry. All it does is call `WithField` for
 // each `Field`.
 func (logger *Logger) WithFields(fields Fields) *Entry {
-	return NewEntry(logger).WithFields(fields)
+	entry := NewEntry(logger)
+	if entry != nil {
+		return entry.WithFields(fields)
+	}
+	return entry
+}
+
+func (logger *Logger) WFs(fields Fields) *Entry {
+	return logger.WithFields(fields)
 }
 
 func (logger *Logger) Debugf(format string, args ...interface{}) {
